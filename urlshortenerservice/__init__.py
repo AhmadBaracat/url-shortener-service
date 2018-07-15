@@ -1,14 +1,18 @@
 import random
 import string
+
+import redis
 import validators
 from flask import Flask
 from flask import jsonify
 from flask import request
 
+ONE_WEEK_DURATION_IN_SECONDS = 7 * 24 * 60 * 60
 SHORTENED_URL_LENGTH = 10
 SHORTENED_URL_ALPHABET = string.ascii_uppercase + string.ascii_lowercase + string.digits
 
 app = Flask(__name__)
+r = redis.StrictRedis()
 
 
 @app.route("/")
@@ -31,7 +35,11 @@ def shorten_url():
     url = extract_url_from_request()
     key = ''.join(random.choices(SHORTENED_URL_ALPHABET, k=SHORTENED_URL_LENGTH))
 
-    return jsonify({"shortened_url": key}), 201
+    while r.get(key) is not None:
+        key = ''.join(random.choices(SHORTENED_URL_ALPHABET, k=SHORTENED_URL_LENGTH))
+
+    r.set(key, url, ONE_WEEK_DURATION_IN_SECONDS)
+    return jsonify({"shortened_url": request.url_root + key}), 201
 
 
 def is_valid_post_request(request):
