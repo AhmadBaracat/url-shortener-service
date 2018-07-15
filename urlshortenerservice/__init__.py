@@ -1,7 +1,12 @@
+import random
+import string
 import validators
 from flask import Flask
 from flask import jsonify
 from flask import request
+
+SHORTENED_URL_LENGTH = 10
+SHORTENED_URL_ALPHABET = string.ascii_uppercase + string.ascii_lowercase + string.digits
 
 app = Flask(__name__)
 
@@ -23,7 +28,10 @@ def shorten_url():
     if not is_valid:
         return error_response
 
-    return jsonify({"shortened_url": "placeholder"}), 201
+    url = extract_url_from_request()
+    key = ''.join(random.choices(SHORTENED_URL_ALPHABET, k=SHORTENED_URL_LENGTH))
+
+    return jsonify({"shortened_url": key}), 201
 
 
 def is_valid_post_request(request):
@@ -32,7 +40,7 @@ def is_valid_post_request(request):
     if not request.is_json or request.get_json(False, True, True) is None:
         return False, generate_error_msg("Your request should contain valid json body")
 
-    url = request.get_json().get('url', '')
+    url = extract_url_from_request()
 
     if url == '':
         return False, generate_error_msg("Please provide a url to be shortened")
@@ -41,6 +49,10 @@ def is_valid_post_request(request):
         return False, generate_error_msg("Please provide a valid url")
 
     return True, None
+
+
+def extract_url_from_request():
+    return request.get_json().get('url', '')
 
 
 def generate_error_msg(msg):
