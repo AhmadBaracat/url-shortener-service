@@ -4,7 +4,9 @@ import string
 import redis
 import validators
 from flask import Flask
+from flask import abort
 from flask import jsonify
+from flask import redirect
 from flask import request
 
 ONE_WEEK_DURATION_IN_SECONDS = 7 * 24 * 60 * 60
@@ -22,7 +24,10 @@ def root():
 
 @app.route('/<shortened_url>', methods=['GET'])
 def get_shortened_url(shortened_url):
-    return ''
+    original_url = r.get(shortened_url)
+    if original_url is None:
+        abort(404)
+    return redirect(original_url, code=302)
 
 
 @app.route('/shorten_url', methods=['POST'])
