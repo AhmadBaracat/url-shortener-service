@@ -13,60 +13,61 @@ ONE_WEEK_DURATION_IN_SECONDS = 7 * 24 * 60 * 60
 SHORTENED_URL_LENGTH = 10
 SHORTENED_URL_ALPHABET = string.ascii_uppercase + string.ascii_lowercase + string.digits
 
-app = Flask(__name__)
-r = redis.StrictRedis()
 
+def create_app(redis_client=None):
+    app = Flask(__name__)
+    if redis_client is None:
+        r = redis.StrictRedis()
+    else:
+        r = redis_client
 
-@app.route("/")
-def root():
-    return ''
+    @app.route("/")
+    def root():
+        return ''
 
+    @app.route('/<shortened_url>', methods=['GET'])
+    def get_shortened_url(shortened_url):
+        original_url = r.get(shortened_url)
+        if original_url is None:
+            abort(404)
+        return redirect(original_url, code=302)
 
-@app.route('/<shortened_url>', methods=['GET'])
-def get_shortened_url(shortened_url):
-    original_url = r.get(shortened_url)
-    if original_url is None:
-        abort(404)
-    return redirect(original_url, code=302)
+    @app.route('/shorten_url', methods=['POST'])
+    def shorten_url():
+        is_valid, error_response = is_valid_post_request(request)
 
+        if not is_valid:
+            return error_response
 
-@app.route('/shorten_url', methods=['POST'])
-def shorten_url():
-    is_valid, error_response = is_valid_post_request(request)
-
-    if not is_valid:
-        return error_response
-
-    url = extract_url_from_request()
-    key = ''.join(random.choices(SHORTENED_URL_ALPHABET, k=SHORTENED_URL_LENGTH))
-
-    while r.get(key) is not None:
+        url = extract_url_from_request()
         key = ''.join(random.choices(SHORTENED_URL_ALPHABET, k=SHORTENED_URL_LENGTH))
 
-    r.set(key, url, ONE_WEEK_DURATION_IN_SECONDS)
-    return jsonify({"shortened_url": request.url_root + key}), 201
+        while r.get(key) is not None:
+            key = ''.join(random.choices(SHORTENED_URL_ALPHABET, k=SHORTENED_URL_LENGTH))
 
+        r.set(key, url, ONE_WEEK_DURATION_IN_SECONDS)
+        return jsonify({"shortened_url": request.url_root + key}), 201
 
-def is_valid_post_request(request):
-    # Make sure that the request header was set correctly and
-    # that the request contains json body
-    if not request.is_json or request.get_json(False, True, True) is None:
-        return False, generate_error_msg("Your request should contain valid json body")
+    def is_valid_post_request(request):
+        # Make sure that the request header was set correctly and
+        # that the request contains json body
+        if not request.is_json or request.get_json(False, True, True) is None:
+            return False, generate_error_msg("Your request should contain valid json body")
 
-    url = extract_url_from_request()
+        url = extract_url_from_request()
 
-    if url == '':
-        return False, generate_error_msg("Please provide a url to be shortened")
+        if url == '':
+            return False, generate_error_msg("Please provide a url to be shortened")
 
-    if not validators.url(url):
-        return False, generate_error_msg("Please provide a valid url")
+        if not validators.url(url):
+            return False, generate_error_msg("Please provide a valid url")
 
-    return True, None
+        return True, None
 
+    def extract_url_from_request():
+        return request.get_json().get('url', '')
 
-def extract_url_from_request():
-    return request.get_json().get('url', '')
+    def generate_error_msg(msg):
+        return jsonify({"error_message": msg}), 400
 
-
-def generate_error_msg(msg):
-    return jsonify({"error_message": msg}), 400
+    return app
