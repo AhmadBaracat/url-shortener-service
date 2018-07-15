@@ -21,9 +21,9 @@ def create_app(redis_client=None):
     else:
         r = redis_client
 
-    @app.route("/")
+    @app.route('/')
     def root():
-        return ''
+        return generate_error_msg('Please use the /shorten_url endpoint to shorten a url')
 
     @app.route('/<shortened_url>', methods=['GET'])
     def get_shortened_url(shortened_url):
@@ -46,21 +46,21 @@ def create_app(redis_client=None):
             key = generate_random_key()
 
         r.set(key, url, ONE_WEEK_DURATION_IN_SECONDS)
-        return jsonify({"shortened_url": request.url_root + key}), 201
+        return jsonify({'shortened_url': request.url_root + key}), 201
 
     def is_valid_post_request(request):
         # Make sure that the request header was set correctly and
         # that the request contains json body
         if not request.is_json or request.get_json(False, True, True) is None:
-            return False, generate_error_msg("Your request should contain valid json body")
+            return False, generate_error_msg('Your request should contain valid json body')
 
         url = extract_url_from_request()
 
         if url == '':
-            return False, generate_error_msg("Please provide a url to be shortened")
+            return False, generate_error_msg('Please provide a url to be shortened')
 
         if not validators.url(url):
-            return False, generate_error_msg("Please provide a valid url")
+            return False, generate_error_msg('Please provide a valid url')
 
         return True, None
 
@@ -71,6 +71,6 @@ def create_app(redis_client=None):
         return ''.join(random.choices(SHORTENED_URL_ALPHABET, k=SHORTENED_URL_LENGTH))
 
     def generate_error_msg(msg):
-        return jsonify({"error_message": msg}), 400
+        return jsonify({'error_message': msg}), 400
 
     return app
