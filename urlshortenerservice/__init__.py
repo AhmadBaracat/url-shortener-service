@@ -40,10 +40,10 @@ def create_app(redis_client=None):
             return error_response
 
         url = extract_url_from_request()
-        key = ''.join(random.choices(SHORTENED_URL_ALPHABET, k=SHORTENED_URL_LENGTH))
+        key = generate_random_key()
 
         while r.get(key) is not None:
-            key = ''.join(random.choices(SHORTENED_URL_ALPHABET, k=SHORTENED_URL_LENGTH))
+            key = generate_random_key()
 
         r.set(key, url, ONE_WEEK_DURATION_IN_SECONDS)
         return jsonify({"shortened_url": request.url_root + key}), 201
@@ -66,6 +66,9 @@ def create_app(redis_client=None):
 
     def extract_url_from_request():
         return request.get_json().get('url', '')
+
+    def generate_random_key():
+        return ''.join(random.choices(SHORTENED_URL_ALPHABET, k=SHORTENED_URL_LENGTH))
 
     def generate_error_msg(msg):
         return jsonify({"error_message": msg}), 400
