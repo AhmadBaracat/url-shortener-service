@@ -10,7 +10,7 @@ from flask import redirect
 from flask import request
 
 ONE_WEEK_DURATION_IN_SECONDS = 7 * 24 * 60 * 60
-SHORTENED_URL_LENGTH = 10
+SHORTENED_URL_LENGTH = 6
 SHORTENED_URL_ALPHABET = string.ascii_uppercase + string.ascii_lowercase + string.digits
 
 
